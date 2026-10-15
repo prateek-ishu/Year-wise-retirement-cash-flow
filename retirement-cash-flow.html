@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Year-wise retirement cash flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --ink:#16233B; --muted:#5B677A; --line:#DDE2E8;
+  --head:#EEF1F5; --accent:#2B4C7E; --invest:#E6F2EC; --invest-ink:#1F6B4F;
+  --retire:#FFF4DC; --retire-ink:#8A5A00; --zero:#A3ACB9; --focus:#2B4C7E;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1621; --surface:#172131; --ink:#E5EAF2; --muted:#9AA6B8; --line:#2A3649;
+    --head:#1D293B; --accent:#8FB0E3; --invest:#153328; --invest-ink:#7DD3AE;
+    --retire:#3A2E12; --retire-ink:#F2C66B; --zero:#5D6A7D; --focus:#8FB0E3;
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.5}
+.page{display:grid;grid-template-columns:20rem minmax(0,1fr);gap:1.5rem;padding:1.5rem;max-width:110rem;margin:0 auto}
+@media (max-width:900px){.page{grid-template-columns:1fr;padding:1rem}}
+
+/* Inputs */
+.inputs{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1.25rem;align-self:start;position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow:auto}
+@media (max-width:900px){.inputs{position:static;max-height:none}}
+.inputs h2{font-size:1.05rem;font-weight:600;margin:0 0 .25rem}
+.inputs p.hint{margin:0 0 1rem;color:var(--muted);font-size:.85rem}
+fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:.85rem 0 .5rem}
+legend{font-weight:600;font-size:.9rem;padding:0;margin-bottom:.5rem}
+.field{display:grid;grid-template-columns:1fr 7.5rem;align-items:center;gap:.5rem;margin-bottom:.5rem}
+.field label{font-size:.84rem;color:var(--muted);line-height:1.3}
+.field .box{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.field .box:focus-within{outline:2px solid var(--focus);outline-offset:1px}
+.field input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:.88rem;padding:.35rem .5rem;text-align:right;font-variant-numeric:tabular-nums}
+.field input:focus{outline:none}
+.field .u{font-size:.75rem;color:var(--muted);padding-right:.5rem;white-space:nowrap}
+.field.bad .box{border-color:#C0392B}
+.actions{display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap}
+button{font:inherit;font-size:.85rem;font-weight:500;border-radius:6px;padding:.45rem .8rem;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.err{color:#C0392B;font-size:.82rem;margin-top:.5rem;min-height:1.2em}
+
+/* Main */
+main{min-width:0;display:flex;flex-direction:column;gap:1rem}
+.lead h1{font-size:1.6rem;font-weight:700;letter-spacing:-.01em;margin:0}
+.lead p{margin:.35rem 0 0;color:var(--muted);max-width:75ch}
+.lead p b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.toolbar label{display:inline-flex;gap:.4rem;align-items:center;cursor:pointer}
+.key{display:inline-flex;align-items:center;gap:.35rem}
+.key i{display:inline-block;width:.9rem;height:.9rem;border-radius:3px;border:1px solid var(--line)}
+
+.tablewrap{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:calc(100vh - 11rem)}
+@media (max-width:900px){.tablewrap{max-height:75vh}}
+table{border-collapse:separate;border-spacing:0;font-size:.84rem;font-variant-numeric:tabular-nums;width:max-content;min-width:100%}
+th,td{padding:.45rem .7rem;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--head);z-index:2;vertical-align:bottom;white-space:normal;min-width:9.5rem;max-width:12.5rem;font-weight:600;font-size:.82rem;line-height:1.3}
+th .f{display:block;font-weight:400;font-size:.7rem;color:var(--muted);margin-top:.3rem;line-height:1.35}
+th:first-child,td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;min-width:4rem;border-right:1px solid var(--line)}
+th:first-child{z-index:3;background:var(--head)}
+th.l,td.l{text-align:left}
+th.narrow{min-width:5rem}
+td.z{color:var(--zero)}
+th.inv{background:var(--invest)}
+td.inv{background:var(--invest);color:var(--invest-ink);font-weight:500}
+tr.ret td{background:var(--retire)}
+tr.ret td:first-child{color:var(--retire-ink);font-weight:600}
+tbody tr:hover td{filter:brightness(.97)}
+@media (prefers-color-scheme:dark){tbody tr:hover td{filter:brightness(1.15)}}
+.note{color:var(--muted);font-size:.8rem;max-width:90ch;margin:0}
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="inputs" aria-label="Plan inputs">
+    <h2>Your inputs</h2>
+    <p class="hint">Change any value and the table recalculates.</p>
+    <form id="form" autocomplete="off" onsubmit="return false"></form>
+    <div class="err" id="err" role="alert"></div>
+    <div class="actions">
+      <button type="button" id="reset">Reset to sample</button>
+      <button type="button" class="primary" id="csv">Download CSV</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="lead">
+      <h1>Year-wise retirement cash flow</h1>
+      <p id="summary"></p>
+    </div>
+    <div class="toolbar">
+      <label><input type="checkbox" id="full"> Show full rupee amounts</label>
+      <span class="key"><i style="background:var(--retire)"></i> Retirement year</span>
+      <span class="key"><i style="background:var(--invest)"></i> New investment needed</span>
+    </div>
+    <div class="tablewrap">
+      <table id="table"><thead></thead><tbody></tbody></table>
+    </div>
+    <p class="note">n = years from today, k = years since retirement. Balances are year-end. Contributions made through the year earn half a year's return in that year. On retirement EPF moves fully into other assets, the NPS lumpsum share moves into other assets, and the rest of NPS buys a level, lifelong annuity. Taxes are not modelled.</p>
+  </main>
+</div>
+
+<script>
+(() => {
+  const FIELDS = [
+    { g: 'Profile', key: 'current_year', label: 'Plan start year', unit: 'year', v: 2026, step: 1 },
+    { g: 'Profile', key: 'current_age', label: 'Current age', unit: 'yrs', v: 35, step: 1 },
+    { g: 'Profile', key: 'retire_age', label: 'Retirement age', unit: 'yrs', v: 60, step: 1 },
+    { g: 'Profile', key: 'life_expectancy', label: 'Life expectancy', unit: 'yrs', v: 85, step: 1 },
+    { g: 'Expenses', key: 'monthly_expense', label: 'Monthly expense today', unit: '₹/mo', v: 75000, step: 1000 },
+    { g: 'Expenses', key: 'inflation_pre', label: 'Inflation before retirement', unit: '%', v: 6, step: 0.25 },
+    { g: 'Expenses', key: 'inflation_post', label: 'Inflation after retirement', unit: '%', v: 6, step: 0.25 },
+    { g: 'EPF', key: 'epf_balance', label: 'EPF balance today', unit: '₹', v: 600000, step: 10000 },
+    { g: 'EPF', key: 'epf_monthly', label: 'Monthly contribution (employee + employer)', unit: '₹/mo', v: 12000, step: 500 },
+    { g: 'EPF', key: 'epf_rate', label: 'Interest rate', unit: '%', v: 8.25, step: 0.05 },
+    { g: 'NPS Tier 1', key: 'nps_balance', label: 'NPS balance today', unit: '₹', v: 300000, step: 10000 },
+    { g: 'NPS Tier 1', key: 'nps_monthly', label: 'Monthly contribution', unit: '₹/mo', v: 5000, step: 500 },
+    { g: 'NPS Tier 1', key: 'nps_rate', label: 'Return', unit: '%', v: 10, step: 0.25 },
+    { g: 'NPS Tier 1', key: 'nps_lumpsum_pct', label: 'Lumpsum share at retirement', unit: '%', v: 60, step: 5 },
+    { g: 'NPS Tier 1', key: 'annuity_rate', label: 'Annuity rate on the rest', unit: '%', v: 6.5, step: 0.1 },
+    { g: 'Other assets', key: 'other_balance', label: 'Corpus today (MF, stocks, FD)', unit: '₹', v: 500000, step: 10000 },
+    { g: 'Other assets', key: 'sip_monthly', label: 'Monthly contribution', unit: '₹/mo', v: 10000, step: 500 },
+    { g: 'Other assets', key: 'sip_stepup', label: 'Yearly step-up (contribution and new investment)', unit: '%', v: 5, step: 0.5 },
+    { g: 'Other assets', key: 'other_rate_pre', label: 'Return before retirement', unit: '%', v: 11, step: 0.25 },
+    { g: 'Other assets', key: 'other_rate_post', label: 'Return after retirement', unit: '%', v: 8, step: 0.25 },
+    { g: 'Contributions', key: 'contrib_growth', label: 'Yearly growth of EPF & NPS contribution', unit: '%', v: 7, step: 0.5 },
+  ];
+
+  const COLS = [
+    { k: 'age', t: 'Age', f: 'Current age + n', cls: 'narrow', raw: true },
+    { k: 'year', t: 'Year', f: 'Start year + n', cls: 'narrow', raw: true },
+    { k: 'phase', t: 'Phase', f: 'Working while age < retirement age', cls: 'l narrow', raw: true },
+    { k: 'expense', t: 'Annual expense', f: 'Monthly expense × 12 × (1 + pre-ret inflation)ⁿ; after retiring × (1 + post-ret inflation)ᵏ' },
+    { k: 'epf_contrib', t: 'EPF contribution', f: 'EPF monthly × 12 × (1 + contribution growth)ⁿ' },
+    { k: 'epf_balance', t: 'EPF balance', f: 'Prev EPF × (1 + EPF rate) + EPF contribution × (1 + EPF rate ÷ 2)' },
+    { k: 'nps_contrib', t: 'NPS contribution', f: 'NPS monthly × 12 × (1 + contribution growth)ⁿ' },
+    { k: 'nps_balance', t: 'NPS balance', f: 'Prev NPS × (1 + NPS rate) + NPS contribution × (1 + NPS rate ÷ 2)' },
+    { k: 'other_balance', t: 'Other assets corpus', f: 'Working: prev × (1 + pre-ret return) + (monthly contribution × 12 × (1 + step-up)ⁿ + new investment) × (1 + pre-ret return ÷ 2). Retired: (prev + EPF → other + NPS lumpsum − withdrawal) × (1 + post-ret return)' },
+    { k: 'extra_investment', t: 'New investment required / year', f: 'X × (1 + step-up)ⁿ, where X makes the future value at retirement = corpus needed at retirement − corpus available', cls: 'inv' },
+    { k: 'epf_to_other', t: 'EPF → other assets', f: 'Retirement year: full EPF balance withdrawn' },
+    { k: 'nps_lumpsum', t: 'NPS lumpsum → other', f: 'Retirement year: NPS corpus × lumpsum %' },
+    { k: 'nps_annuity_buy', t: 'NPS → annuity purchase', f: 'Retirement year: NPS corpus − lumpsum' },
+    { k: 'annuity_income_monthly', t: 'Immediate annuity income / month', f: 'Annuity purchase × annuity rate ÷ 12, paid from the retirement year for life' },
+    { k: 'withdrawal', t: 'Withdrawal', f: 'Expense − annuity income / month × 12, taken from other assets corpus' },
+    { k: 'total_corpus', t: 'Total corpus', f: 'EPF + NPS + other assets corpus' },
+  ];
+
+  // ---------- Calculation ----------
+  function build(a) {
+    const pct = (k) => a[k] / 100;
+    const A0 = a.current_age, R = a.retire_age, L = a.life_expectancy;
+    const grow = (bal, c, r) => bal * (1 + r) + c * (1 + r / 2);
+
+    const simulate = (extra) => {
+      let epf = a.epf_balance, nps = a.nps_balance, other = a.other_balance, annuityYr = 0;
+      const rows = [];
+      for (let age = A0; age <= L; age++) {
+        const t = age - A0, pre = age < R;
+        const expense = a.monthly_expense * 12 * Math.pow(1 + pct('inflation_pre'), Math.min(t, R - A0)) * Math.pow(1 + pct('inflation_post'), Math.max(0, age - R));
+        const row = { age, year: a.current_year + t, phase: pre ? 'Working' : 'Retired', expense, epf_contrib: 0, nps_contrib: 0, other_contrib: 0, extra_investment: 0, epf_to_other: 0, nps_lumpsum: 0, nps_annuity_buy: 0, other_start: null, annuity_income_monthly: 0, withdrawal: 0, unmet: 0 };
+        if (pre) {
+          row.epf_contrib = a.epf_monthly * 12 * Math.pow(1 + pct('contrib_growth'), t);
+          row.nps_contrib = a.nps_monthly * 12 * Math.pow(1 + pct('contrib_growth'), t);
+          row.other_contrib = a.sip_monthly * 12 * Math.pow(1 + pct('sip_stepup'), t);
+          row.extra_investment = extra(t);
+          epf = grow(epf, row.epf_contrib, pct('epf_rate'));
+          nps = grow(nps, row.nps_contrib, pct('nps_rate'));
+          other = grow(other, row.other_contrib + row.extra_investment, pct('other_rate_pre'));
+        } else {
+          if (age === R) {
+            row.epf_to_other = epf;
+            row.nps_lumpsum = nps * pct('nps_lumpsum_pct');
+            row.nps_annuity_buy = nps - row.nps_lumpsum;
+            annuityYr = row.nps_annuity_buy * pct('annuity_rate');
+            other += epf + row.nps_lumpsum;
+            epf = 0; nps = 0;
+          }
+          row.other_start = other;
+          row.annuity_income_monthly = annuityYr / 12;
+          const need = Math.max(0, expense - annuityYr);
+          row.withdrawal = Math.min(need, other);
+          row.unmet = need - row.withdrawal;
+          other = (other - row.withdrawal) * (1 + pct('other_rate_post'));
+        }
+        Object.assign(row, { epf_balance: epf, nps_balance: nps, other_balance: other, total_corpus: epf + nps + other, required_corpus: null });
+        rows.push(row);
+      }
+      // Required corpus, backward from the last year
+      let rc = 0;
+      for (let i = rows.length - 1; i >= 0 && rows[i].phase === 'Retired'; i--) {
+        rc = Math.max(0, rows[i].expense - rows[i].annuity_income_monthly * 12) + rc / (1 + pct('other_rate_post'));
+        rows[i].required_corpus = rc;
+      }
+      return rows;
+    };
+
+    // Pass 1: current savings only → gap at retirement
+    const base = simulate(() => 0);
+    const first = base.find((r) => r.phase === 'Retired');
+    const gap = first ? first.required_corpus - first.other_start : 0;
+    const r1 = pct('other_rate_pre'), s = pct('sip_stepup'), n = R - A0;
+    let F = 0;
+    for (let t = 0; t < n; t++) F += Math.pow(1 + s, t) * (1 + r1 / 2) * Math.pow(1 + r1, n - 1 - t);
+    const x0 = gap > 0 && F > 0 ? gap / F : 0;
+
+    // Pass 2: with the new investment added to other assets
+    const rows = simulate((t) => x0 * Math.pow(1 + s, t));
+    const ret = rows.find((r) => r.phase === 'Retired');
+    const unmetBase = base.find((r) => r.unmet > 0);
+    return { rows, gap, x0, ret, runsOutAge: unmetBase ? unmetBase.age : null };
+  }
+
+  // ---------- Formatting ----------
+  const full = document.getElementById('full');
+  const inr = (v) => {
+    const s = v < 0 ? '−' : '', x = Math.abs(v);
+    if (full.checked) return s + '₹' + Math.round(x).toLocaleString('en-IN');
+    if (x >= 1e7) return s + '₹' + (x / 1e7).toFixed(2) + ' Cr';
+    if (x >= 1e5) return s + '₹' + (x / 1e5).toFixed(2) + ' L';
+    return s + '₹' + Math.round(x).toLocaleString('en-IN');
+  };
+  const compact = (v) => {
+    const x = Math.abs(v);
+    if (x >= 1e7) return '₹' + (x / 1e7).toFixed(2) + ' Cr';
+    if (x >= 1e5) return '₹' + (x / 1e5).toFixed(2) + ' L';
+    return '₹' + Math.round(x).toLocaleString('en-IN');
+  };
+
+  // ---------- Inputs ----------
+  const form = document.getElementById('form');
+  const errBox = document.getElementById('err');
+  const groups = [...new Set(FIELDS.map((f) => f.g))];
+  groups.forEach((g) => {
+    const fs = document.createElement('fieldset');
+    const lg = document.createElement('legend'); lg.textContent = g; fs.appendChild(lg);
+    FIELDS.filter((f) => f.g === g).forEach((f) => {
+      const row = document.createElement('div'); row.className = 'field'; row.dataset.key = f.key;
+      const lb = document.createElement('label'); lb.htmlFor = 'in-' + f.key; lb.textContent = f.label;
+      const box = document.createElement('div'); box.className = 'box';
+      const inp = document.createElement('input'); inp.type = 'number'; inp.id = 'in-' + f.key; inp.step = f.step; inp.value = f.v; inp.inputMode = 'decimal';
+      const u = document.createElement('span'); u.className = 'u'; u.textContent = f.unit;
+      box.append(inp, u); row.append(lb, box); fs.appendChild(row);
+      inp.addEventListener('input', render);
+    });
+    form.appendChild(fs);
+  });
+
+  const readInputs = () => {
+    const a = {};
+    FIELDS.forEach((f) => { a[f.key] = parseFloat(document.getElementById('in-' + f.key).value); });
+    return a;
+  };
+
+  const validate = (a) => {
+    const bad = [];
+    FIELDS.forEach((f) => { if (!isFinite(a[f.key])) bad.push([f.key, f.label + ' needs a number.']); });
+    if (bad.length) return bad;
+    if (!(a.current_age < a.retire_age)) bad.push(['retire_age', 'Retirement age must be above current age.']);
+    if (!(a.retire_age <= a.life_expectancy)) bad.push(['life_expectancy', 'Life expectancy must be at least the retirement age.']);
+    if (a.life_expectancy - a.current_age > 80) bad.push(['life_expectancy', 'Plan length is limited to 80 years.']);
+    ['monthly_expense', 'epf_balance', 'epf_monthly', 'nps_balance', 'nps_monthly', 'other_balance', 'sip_monthly'].forEach((k) => { if (a[k] < 0) bad.push([k, 'Amounts can\'t be negative.']); });
+    if (a.nps_lumpsum_pct < 0 || a.nps_lumpsum_pct > 100) bad.push(['nps_lumpsum_pct', 'Lumpsum share must be between 0% and 100%.']);
+    if (a.other_rate_post <= -100) bad.push(['other_rate_post', 'Return after retirement must be above −100%.']);
+    return bad;
+  };
+
+  // ---------- Table ----------
+  const thead = document.querySelector('#table thead');
+  const tbody = document.querySelector('#table tbody');
+  const htr = document.createElement('tr');
+  COLS.forEach((c) => {
+    const th = document.createElement('th'); th.scope = 'col';
+    if (c.cls) th.className = c.cls;
+    th.append(document.createTextNode(c.t));
+    const f = document.createElement('span'); f.className = 'f'; f.textContent = c.f; th.appendChild(f);
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+
+  let last = null;
+  function render() {
+    const a = readInputs();
+    form.querySelectorAll('.field').forEach((el) => el.classList.remove('bad'));
+    const bad = validate(a);
+    if (bad.length) {
+      bad.forEach(([k]) => form.querySelector(`.field[data-key="${k}"]`)?.classList.add('bad'));
+      errBox.textContent = bad[0][1];
+      return;
+    }
+    errBox.textContent = '';
+    last = build(a);
+    const { rows, gap, x0, ret, runsOutAge } = last;
+
+    const sum = document.getElementById('summary');
+    sum.replaceChildren();
+    const b = (t) => { const e = document.createElement('b'); e.textContent = t; return e; };
+    const txt = (t) => document.createTextNode(t);
+    if (gap > 0) {
+      sum.append(
+        txt('With current savings the money runs out at age '), b(String(runsOutAge)),
+        txt('. To last until '), b(String(a.life_expectancy)),
+        txt(', invest an extra '), b(compact(x0 / 12) + ' a month'),
+        txt(' from today, rising '), b(a.sip_stepup + '%'), txt(' a year. Annuity income from age '),
+        b(String(a.retire_age)), txt(': '), b(compact(ret.annuity_income_monthly) + ' a month'), txt('.')
+      );
+    } else {
+      sum.append(
+        txt('Current savings already last until '), b(String(a.life_expectancy)),
+        txt(', with no new investment needed. Annuity income from age '), b(String(a.retire_age)),
+        txt(': '), b(compact(ret.annuity_income_monthly) + ' a month'), txt('.')
+      );
+    }
+
+    const frag = document.createDocumentFragment();
+    rows.forEach((r) => {
+      const tr = document.createElement('tr');
+      if (r.age === a.retire_age) tr.className = 'ret';
+      COLS.forEach((c) => {
+        const td = document.createElement('td');
+        if (c.cls) td.className = c.cls.replace('narrow', '').trim();
+        const v = r[c.k];
+        if (c.raw) td.textContent = String(v);
+        else { td.textContent = inr(v); if (Math.round(v) === 0) td.classList.add('z'); }
+        tr.appendChild(td);
+      });
+      frag.appendChild(tr);
+    });
+    tbody.replaceChildren(frag);
+  }
+
+  full.addEventListener('change', render);
+
+  document.getElementById('reset').addEventListener('click', () => {
+    FIELDS.forEach((f) => { document.getElementById('in-' + f.key).value = f.v; });
+    render();
+  });
+
+  document.getElementById('csv').addEventListener('click', () => {
+    if (!last) return;
+    const esc = (s) => /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    const lines = [COLS.map((c) => esc(c.t)).join(',')];
+    last.rows.forEach((r) => lines.push(COLS.map((c) => c.raw ? esc(String(r[c.k])) : String(Math.round(r[c.k]))).join(',')));
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = 'retirement-cash-flow.csv';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
